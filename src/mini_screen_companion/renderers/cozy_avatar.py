@@ -181,7 +181,8 @@ def render_cozy_avatar(
         hour = now.hour
 
     # 1. Action & mood status
-    action = avatar_cfg.action.lower()
+    requested_action = avatar_cfg.action.lower()
+    action = requested_action
     status_msg = avatar_cfg.status
 
     if action == "auto" or status_msg == "auto":
@@ -189,7 +190,9 @@ def render_cozy_avatar(
         if action == "auto":
             action = auto_act
         if status_msg == "auto":
-            status_msg = auto_stat
+            labels = {"desk": "Dans le flow", "coffee": "Pause cafe",
+                      "pet": "Calin au chat", "run": "En balade", "sleep": "Zzz..."}
+            status_msg = auto_stat if requested_action == "auto" else labels.get(action, "")
 
     # 2. Manual atmosphere presets override the clock only in the renderer.
     selected_scene = avatar_cfg.scene if avatar_cfg.scene in ("auto", "day", "night", "rain") else "auto"

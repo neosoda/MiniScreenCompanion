@@ -247,3 +247,13 @@ Copyright &copy; 2026 [neosoda](https://github.com/neosoda).
 - Les photos des autres emplacements ne sont plus écrasées.
 
 Détails : [Living Companion V2 — livrables et limites](docs/LIVING_COMPANION_V2.md).
+
+
+### 🎨 Companion Studio (V2 — aperçu local)
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m mini_screen_companion studio --demo
+```
+
+Ouvre `http://127.0.0.1:8765/` : configure l'ambiance (jour, nuit, pluie), les palettes, le chat et les animations, exporte le GIF et sauvegarde tes choix. **Aucun upload matériel** depuis l'atelier. Le firmware d'origine conserve le mode JPEG prudent.

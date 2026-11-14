@@ -57,3 +57,24 @@ Avatar configuration accepts four added options:
 ```
 
 Supported scenes: `auto`, `day`, `night`, `rain`. Palettes: `warm`, `mint`, `lavender`. The cat is independent from the avatar. Atmospheric animations are rendered only in the upper 80px area, without touching the quota panel.
+
+
+## Companion Studio — éditeur local
+
+Lance l'atelier depuis le dossier du projet :
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m mini_screen_companion studio --demo
+```
+
+- Adresse : **http://127.0.0.1:8765/** (aucun accès depuis le LAN).
+- Choisir le décor (jour/nuit/pluie), palette, activité, nom, chat et effets.
+- Prévisualiser en GIF et exporter le résultat.
+- Cliquer sur **Enregistrer le profil** pour écrire uniquement les réglages
+  autorisés dans `config.json`. Le fichier est remplacé atomiquement.
+- Relancer ensuite le moniteur pour charger les nouveaux réglages.
+- Aucun accès au firmware ni envoi Wi-Fi pendant l'utilisation de Studio.
+
+Le mode `--demo` ne simule les quotas que dans l'aperçu ; il n'altère
+pas le mode normal.

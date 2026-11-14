@@ -247,3 +247,12 @@ Copyright &copy; 2026 [neosoda](https://github.com/neosoda).
 - Secondary factory photo slots are no longer overwritten.
 
 See [V2 implementation notes](docs/LIVING_COMPANION_V2.md).
+
+
+### 🎨 Companion Studio (local visual editor)
+
+```bash
+python -m mini_screen_companion studio --demo
+```
+
+Open `http://127.0.0.1:8765/`. Choose scenes, palettes, independent cat, atmospheric effects, animation FPS and export a GIF. Settings are stored in `config.json`. Studio does **not** send data to the physical device.

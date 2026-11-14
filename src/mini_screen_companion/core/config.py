@@ -1,5 +1,6 @@
 import os
 import json
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -109,8 +110,8 @@ class AppConfig:
                     )
                 if "providers" in data:
                     cfg.providers = data["providers"]
-            except Exception as e:
-                print(f"[Config] Warning: Failed to parse {config_file} ({e}), using defaults.")
+            except (OSError, ValueError, TypeError, KeyError) as e:
+                raise ValueError(f"Invalid config file {config_file}: {e}") from e
 
         # Environment variable overrides
         if "AI_SCREEN_HOST" in os.environ:
@@ -166,5 +167,16 @@ class AppConfig:
                 "file": self.logging.file
             }
         }
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp",
+                                          dir=str(target.parent))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=2)
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(temporary, target)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
