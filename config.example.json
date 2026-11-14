@@ -12,7 +12,7 @@
   },
   "avatar": {
     "name": "",
-    "status": "auto",
+    "status": "",
     "action": "auto",
     "animated": true,
     "fps": 8,

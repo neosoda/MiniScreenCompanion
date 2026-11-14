@@ -7,7 +7,7 @@ def get_auto_mood(hour: int) -> Tuple[str, str]:
     if 23 <= hour or hour < 7:
         return "sleep", "Zzz..."
     elif 7 <= hour < 10:
-        return "run", "Ça vib"
+        return "run", ""
     elif 10 <= hour < 12:
         return "desk", "En plein hack"
     elif 12 <= hour < 14:
@@ -135,18 +135,24 @@ def render_room_1_3_background(
     for px in [40, 90, 140, 190]:
         d.line([px, 59, px, 78], fill=(185, 125, 75, 255), width=1)
 
-    # Top status pills
+    # Top status pill (only drawn if a name or explicit non-empty status is provided)
     if user_name and user_name.strip():
         u_str = user_name.strip().upper()
-        bbox_u = font_mono_hdr.getbbox(u_str)
-        uw = bbox_u[2] - bbox_u[0]
-        bbox_s = font_ui_stat.getbbox(f"·  {status_message}")
-        sw = bbox_s[2] - bbox_s[0]
-        pill_w = uw + sw + 20
-        d.rounded_rectangle([6, 3, min(160, 6 + pill_w), 18], radius=3, fill=(8, 14, 38, 240), outline=(42, 65, 115, 255), width=1)
-        d.text((10, 4), u_str, fill=(147, 197, 253, 255), font=font_mono_hdr)
-        d.text((10 + uw + 6, 4), f"·  {status_message}", fill=(240, 245, 255, 255), font=font_ui_stat)
-    else:
+        if status_message and status_message.strip() and status_message.strip().lower() != "ça vib":
+            bbox_u = font_mono_hdr.getbbox(u_str)
+            uw = bbox_u[2] - bbox_u[0]
+            bbox_s = font_ui_stat.getbbox(f"·  {status_message}")
+            sw = bbox_s[2] - bbox_s[0]
+            pill_w = uw + sw + 20
+            d.rounded_rectangle([6, 3, min(160, 6 + pill_w), 18], radius=3, fill=(8, 14, 38, 240), outline=(42, 65, 115, 255), width=1)
+            d.text((10, 4), u_str, fill=(147, 197, 253, 255), font=font_mono_hdr)
+            d.text((10 + uw + 6, 4), f"·  {status_message}", fill=(240, 245, 255, 255), font=font_ui_stat)
+        else:
+            bbox_u = font_mono_hdr.getbbox(u_str)
+            uw = bbox_u[2] - bbox_u[0]
+            d.rounded_rectangle([6, 3, 16 + uw, 18], radius=3, fill=(8, 14, 38, 240), outline=(42, 65, 115, 255), width=1)
+            d.text((10, 4), u_str, fill=(147, 197, 253, 255), font=font_mono_hdr)
+    elif status_message and status_message.strip() and status_message.strip().lower() not in ("ça vib", "auto", "none"):
         bbox_s = font_ui_stat.getbbox(status_message)
         sw = bbox_s[2] - bbox_s[0]
         d.rounded_rectangle([6, 3, 16 + sw, 18], radius=3, fill=(8, 14, 38, 240), outline=(42, 65, 115, 255), width=1)

@@ -20,7 +20,7 @@ class DisplayConfig:
 @dataclass
 class AvatarConfig:
     name: str = ""
-    status: str = "Ça vib"
+    status: str = ""
     action: str = "run"    # "run", "desk", "coffee", "pet", "sleep", "auto"
     animated: bool = True
     fps: int = 8

@@ -67,6 +67,6 @@ class TamagotchiBrain:
             self._current_mood = "Câlin chat"
         else:
             self._current_action = "run"
-            self._current_mood = "Ça vib"
+            self._current_mood = ""
 
         return self._current_action, self._current_mood
