@@ -19,6 +19,7 @@ from .avatar_sprites import (
     load_custom_frames
 )
 from .ambient import create_ambient_cat
+from .effects import draw_atmosphere
 
 def _load_retro_fonts():
     """Load crisp typography for 1/3 - 2/3 layout."""
@@ -172,23 +173,28 @@ def render_cozy_avatar(
     if not time_str:
         time_str = now.strftime("%H:%M")
 
+    try:
+        hour = int(time_str.split(":")[0])
+        if not 0 <= hour <= 23:
+            raise ValueError("hour out of range")
+    except (ValueError, IndexError):
+        hour = now.hour
+
     # 1. Action & mood status
     action = avatar_cfg.action.lower()
     status_msg = avatar_cfg.status
 
     if action == "auto" or status_msg == "auto":
-        auto_act, auto_stat = get_auto_mood(now.hour)
+        auto_act, auto_stat = get_auto_mood(hour)
         if action == "auto":
             action = auto_act
         if status_msg == "auto":
             status_msg = auto_stat
 
-    # 2. Real day/night cycle. Explicit preview time takes precedence.
-    try:
-        hour = int(time_str.split(":")[0])
-    except (ValueError, IndexError):
-        hour = now.hour
-    is_night = hour >= 20 or hour < 7
+    # 2. Manual atmosphere presets override the clock only in the renderer.
+    selected_scene = avatar_cfg.scene if avatar_cfg.scene in ("auto", "day", "night", "rain") else "auto"
+    scene = ("night" if hour >= 20 or hour < 7 else "day") if selected_scene == "auto" else selected_scene
+    is_night = scene == "night"
 
     # Render top 1/3 room background (y=0 to 78)
     show_stool = (action != "desk" and action != "pet" and action != "sleep")
@@ -200,7 +206,8 @@ def render_cozy_avatar(
         font_ui_stat=RETRO_FONTS["ui_stat"],
         font_mono_clock=RETRO_FONTS["clock"],
         show_stool=show_stool,
-        is_night=is_night
+        is_night=is_night,
+        palette=avatar_cfg.palette
     )
 
     # 3. Pre-render bottom 2/3 quotas panel (y=80 to 240)
@@ -224,19 +231,19 @@ def render_cozy_avatar(
         offsets = [-12, -6, 0, 6, 12, 6, 0, -6]
     elif action == "desk":
         avatar_base_x = 92
-        offsets = [0] * frames_count
+        offsets = [0] * 8
     elif action == "coffee":
         avatar_base_x = 135 # near window
-        offsets = [0] * frames_count
+        offsets = [0] * 8
     elif action == "pet":
         avatar_base_x = 90
-        offsets = [0] * frames_count
+        offsets = [0] * 8
     elif action == "sleep":
         avatar_base_x = 88
-        offsets = [0] * frames_count
+        offsets = [0] * 8
     else:
         avatar_base_x = 95
-        offsets = [0] * frames_count
+        offsets = [0] * 8
 
     for i in range(frames_count):
         phase = (i + frame_offset) % 8
@@ -257,20 +264,18 @@ def render_cozy_avatar(
         elif action == "sleep":
             avatar_sprite = create_sleep_avatar(phase)
         else:
-            avatar_sprite = create_runner_avatar(i)
+            avatar_sprite = create_desk_avatar(phase)
 
         cur_x = avatar_base_x + offsets[phase]
         frame.paste(avatar_sprite, (cur_x, avatar_y), avatar_sprite)
 
         # A separate companion inhabits the room even while the developer codes.
-        if action != "pet":
+        if avatar_cfg.show_cat and action != "pet":
             room_cat = create_ambient_cat(phase, sleeping=(action == "sleep"))
-            frame.paste(room_cat, (174, 57), room_cat)
+            cat_x = 174 + (-2, -1, 0, 1, 2, 1, 0, -1)[phase]
+            frame.paste(room_cat, (cat_x, 57), room_cat)
 
-        if is_night:
-            # Tiny twinkles outside the window, visible in the GIF animation.
-            glint = ImageDraw.Draw(frame)
-            glint.point((176 + (phase % 3) * 4, 20), fill=(252, 231, 168, 255))
+        draw_atmosphere(frame, scene, phase, action, enabled=avatar_cfg.effects)
 
         # Paste bottom quotas panel (y=80 to 240)
         frame.paste(quotas_panel, (0, 80), quotas_panel)
@@ -280,7 +285,7 @@ def render_cozy_avatar(
 
     buf = io.BytesIO()
     if animated and avatar_cfg.animated:
-        duration_ms = max(50, int(1000 / max(1, avatar_cfg.fps)))
+        duration_ms = max(80, int(1000 / max(1, min(12, avatar_cfg.fps))))
         frame_images[0].save(
             buf,
             format="GIF",

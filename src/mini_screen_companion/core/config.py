@@ -26,6 +26,10 @@ class AvatarConfig:
     animated: bool = True
     fps: int = 8
     metric: str = "remaining"   # "remaining" or "used"
+    scene: str = "auto"        # auto, day, night, rain
+    palette: str = "warm"      # warm, mint, lavender
+    show_cat: bool = True
+    effects: bool = True
 
 @dataclass
 class PollingConfig:
@@ -85,7 +89,11 @@ class AppConfig:
                         action=a.get("action", cfg.avatar.action),
                         animated=a.get("animated", cfg.avatar.animated),
                         fps=a.get("fps", cfg.avatar.fps),
-                        metric=a.get("metric", cfg.avatar.metric)
+                        metric=a.get("metric", cfg.avatar.metric),
+                        scene=a.get("scene", cfg.avatar.scene),
+                        palette=a.get("palette", cfg.avatar.palette),
+                        show_cat=a.get("show_cat", cfg.avatar.show_cat),
+                        effects=a.get("effects", cfg.avatar.effects)
                     )
                 if "polling" in data:
                     p = data["polling"]
@@ -142,7 +150,11 @@ class AppConfig:
                 "action": self.avatar.action,
                 "animated": self.avatar.animated,
                 "fps": self.avatar.fps,
-                "metric": self.avatar.metric
+                "metric": self.avatar.metric,
+                "scene": self.avatar.scene,
+                "palette": self.avatar.palette,
+                "show_cat": self.avatar.show_cat,
+                "effects": self.avatar.effects
             },
             "polling": {
                 "refresh_interval_seconds": self.polling.refresh_interval_seconds,

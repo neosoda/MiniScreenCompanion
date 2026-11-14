@@ -17,7 +17,11 @@
     "action": "auto",
     "animated": true,
     "fps": 8,
-    "metric": "remaining"
+    "metric": "remaining",
+    "scene": "auto",
+    "palette": "warm",
+    "show_cat": true,
+    "effects": true
   },
   "polling": {
     "refresh_interval_seconds": 15,

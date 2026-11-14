@@ -46,3 +46,14 @@ python -m mini_screen_companion preview --demo
 
 Production mode never fabricates quota percentages. Missing providers are
 shown as **Donnees indisponibles**. The `--demo` flag remains explicit.
+
+
+## Visual profiles — in progress
+
+Avatar configuration accepts four added options:
+
+```json
+{ "scene": "auto", "palette": "warm", "show_cat": true, "effects": true }
+```
+
+Supported scenes: `auto`, `day`, `night`, `rain`. Palettes: `warm`, `mint`, `lavender`. The cat is independent from the avatar. Atmospheric animations are rendered only in the upper 80px area, without touching the quota panel.

@@ -55,6 +55,10 @@ class TamagotchiBrain:
                 self._focus_until = now + timedelta(minutes=3)
             self._last_snapshot = snapshot
 
+        if current_hour >= 23 or current_hour < 7:
+            self._current_action, self._current_mood = "sleep", "Zzz..."
+            return self._current_action, self._current_mood
+
         if self._focus_until is not None and now < self._focus_until:
             self._current_action = "desk"
             self._current_mood = "En plein code !"
