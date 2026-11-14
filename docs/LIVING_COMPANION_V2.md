@@ -7,7 +7,7 @@ Work-in-progress foundation for a reliable 240×240 desktop companion.
 - **Factory GeekMagic HTTP firmware:** supports the existing JPEG photo upload
   path. There is **no proof of native GIF playback**, so this driver never
   attempts high-frequency JPEG uploads. It coalesces updates to one every
-  \`screen.min_upload_interval_seconds\` (default **300 seconds**) and leaves
+  `screen.min_upload_interval_seconds` (default **300 seconds**) and leaves
   the other photo slots intact.
 - **Local preview:** animated eight-frame GIF; decorative animated cat and
   time-dependent day/night atmosphere. This preview is not evidence of a
@@ -17,7 +17,7 @@ Work-in-progress foundation for a reliable 240×240 desktop companion.
 
 ## Behavior engine
 
-\`TamagotchiBrain.update(snapshot, now=...)\` uses elapsed time rather than
+`TamagotchiBrain.update(snapshot, now=...)` uses elapsed time rather than
 network poll count. The character codes for a few minutes, then takes
 coffee/cat/walking breaks. Real *increases* in 5H quota consumption trigger
 a 3-minute focus period. Reused snapshots and quota resets cannot count
@@ -37,12 +37,12 @@ user avatar's animation frames.
 
 ## Development
 
-\`\`\`powershell
+```powershell
 python -m pip install -e ".[dev]"
 $env:PYTHONPATH="src"
 python -m pytest -q
 python -m mini_screen_companion preview --demo
-\`\`\`
+```
 
 Production mode never fabricates quota percentages. Missing providers are
-shown as **Donnees indisponibles**. The \`--demo\` flag remains explicit.
+shown as **Donnees indisponibles**. The `--demo` flag remains explicit.

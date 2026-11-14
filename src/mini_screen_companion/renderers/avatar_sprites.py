@@ -78,7 +78,7 @@ def render_room_1_3_background(
     d = ImageDraw.Draw(img)
 
     # Wallpaper (Warm cream day, or soft cozy twilight night)
-    wall_color = (245, 238, 226, 255) if not is_night else (220, 214, 206, 255)
+    wall_color = (245, 238, 226, 255) if not is_night else (40, 49, 71, 255)
     d.rectangle([0, 0, 240, 56], fill=wall_color)
 
     if not is_night:
@@ -131,7 +131,7 @@ def render_room_1_3_background(
 
     # Wooden parquet floor (y=56 to 78)
     d.rectangle([0, 56, 240, 58], fill=(115, 72, 38, 255))
-    d.rectangle([0, 59, 240, 78], fill=(218, 158, 105, 255))
+    d.rectangle([0, 59, 240, 78], fill=(218, 158, 105, 255) if not is_night else (113, 85, 75, 255))
     for px in [40, 90, 140, 190]:
         d.line([px, 59, px, 78], fill=(185, 125, 75, 255), width=1)
 

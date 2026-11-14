@@ -69,7 +69,7 @@ class CompanionApp:
 
         ok = self.screen.upload_frame(frame)
         if ok:
-            logging.info("Frame delivered successfully.")
+            logging.info("Frame processed successfully (uploaded, unchanged or rate-limited).")
         else:
             logging.error("Failed to upload frame to screen.")
         return ok

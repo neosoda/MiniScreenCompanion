@@ -21,7 +21,7 @@ class DisplayConfig:
 @dataclass
 class AvatarConfig:
     name: str = ""
-    status: str = ""
+    status: str = "auto"
     action: str = "run"    # "run", "desk", "coffee", "pet", "sleep", "auto"
     animated: bool = True
     fps: int = 8
