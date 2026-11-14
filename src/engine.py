@@ -5,6 +5,7 @@ import signal
 import sys
 import time
 from typing import Optional
+import numpy as np
 
 from src.collectors import SystemCollector, GpuCollector, TelemetrySnapshot
 from src.config import AppConfig
@@ -60,8 +61,12 @@ class TuringCompanionEngine:
                 rotation=self.config.screen.rotation,
             )
 
-        # Update Interval (default: 1.0 second for calm, rock-solid monitoring)
-        self.interval_sec = max(0.5, float(self.config.telemetry.interval_sec or 1.0))
+        # Update Interval (support sub-second high-speed partial updates)
+        self.interval_sec = max(0.05, float(self.config.telemetry.interval_sec or 0.25))
+        self.mode = getattr(self.config.telemetry, "mode", "fluid").lower()
+        self.full_sync_sec = float(getattr(self.config.telemetry, "full_sync_sec", 60.0))
+        self._prev_frame_arr: Optional[np.ndarray] = None
+        self._last_full_sync: float = 0.0
 
     def _setup_signal_handlers(self):
         def _handler(sig, frame):
@@ -101,6 +106,16 @@ class TuringCompanionEngine:
         fps_counter = 0
         t0_fps = time.perf_counter()
 
+        # Cockpit UI quadrants for micro-blit dirty rect tracking
+        zones = [
+            (385, 0, 480, 28),    # Header: Digital Clock
+            (195, 0, 285, 28),    # Header: Uptime Pill
+            (6, 30, 238, 177),    # Card 1: CPU Tachometer, Load Matrix, Temp
+            (242, 30, 474, 177),  # Card 2: GPU Tachometer, Power, VRAM
+            (6, 177, 238, 316),   # Card 3: RAM % + Network Oscilloscope
+            (242, 177, 474, 316), # Card 4: AI Quotas Matrix
+        ]
+
         try:
             while self.running:
                 loop_start = time.perf_counter()
@@ -118,12 +133,65 @@ class TuringCompanionEngine:
                 # 3. Render dashboard frame
                 frame_img = self.renderer.render(snap)
 
-                # 4. Push frame to Turing display
-                success = self.driver.display_pil_image(frame_img)
-                if success:
-                    fps_counter += 1
+                # 4. Push frame to Turing display (Fluid micro-blit or full sync)
+                now_sync = time.perf_counter()
+                use_partial = (
+                    self.mode in ("fluid", "micro_blit", "partial", "turbo")
+                    and hasattr(self.driver, "display_partial")
+                )
+                need_full = (
+                    not use_partial
+                    or self._prev_frame_arr is None
+                    or (now_sync - self._last_full_sync) >= self.full_sync_sec
+                )
+
+                if need_full:
+                    success = self.driver.display_pil_image(frame_img)
+                    if success:
+                        self._prev_frame_arr = np.asarray(frame_img).copy()
+                        self._last_full_sync = now_sync
+                        fps_counter += 1
+                    else:
+                        logger.warning("Full frame send failed. Driver marked disconnected.")
+                        self._prev_frame_arr = None
                 else:
-                    logger.warning("Frame send failed. Driver marked disconnected.")
+                    curr_arr = np.asarray(frame_img)
+                    diff = np.any(curr_arr != self._prev_frame_arr, axis=-1)
+
+                    if np.any(diff):
+                        sent_any = False
+                        all_ok = True
+                        for (zx1, zy1, zx2, zy2) in zones:
+                            sub_diff = diff[zy1:zy2, zx1:zx2]
+                            if np.any(sub_diff):
+                                rows = np.any(sub_diff, axis=1)
+                                cols = np.any(sub_diff, axis=0)
+                                ymin, ymax = np.where(rows)[0][[0, -1]]
+                                xmin, xmax = np.where(cols)[0][[0, -1]]
+
+                                bx1 = zx1 + xmin
+                                by1 = zy1 + ymin
+                                bx2 = zx1 + xmax + 1
+                                by2 = zy1 + ymax + 1
+
+                                sub_img = frame_img.crop((bx1, by1, bx2, by2))
+                                ok = self.driver.display_partial(sub_img, bx1, by1)
+                                if ok:
+                                    sent_any = True
+                                else:
+                                    all_ok = False
+                                    break
+
+                        if all_ok:
+                            self._prev_frame_arr = curr_arr
+                            if sent_any:
+                                fps_counter += 1
+                        else:
+                            logger.warning("Partial frame send failed. Resetting full sync.")
+                            self._prev_frame_arr = None
+                    else:
+                        # Frame identical to previous one, skip hardware write
+                        pass
 
                 # Periodic performance logging (every ~15s)
                 dt_fps = time.perf_counter() - t0_fps
@@ -142,7 +210,7 @@ class TuringCompanionEngine:
 
                 # 5. Paced sleep to match interval precisely
                 elapsed = time.perf_counter() - loop_start
-                sleep_time = max(0.05, self.interval_sec - elapsed)
+                sleep_time = max(0.01, self.interval_sec - elapsed)
                 time.sleep(sleep_time)
 
         except (KeyboardInterrupt, SystemExit):

@@ -228,6 +228,9 @@ class TuringRevA:
 
         try:
             w, h = img.size
+            if w <= 0 or h <= 0:
+                return True
+
             if self.rotation == 180:
                 img = img.rotate(180)
                 x = self.width - x - w
@@ -236,8 +239,10 @@ class TuringRevA:
             if img.mode != "RGB":
                 img = img.convert("RGB")
 
-            x0, y0 = x, y
-            x1, y1 = x0 + w - 1, y0 + h - 1
+            x0 = max(0, min(self.width - 1, int(x)))
+            y0 = max(0, min(self.height - 1, int(y)))
+            x1 = max(x0, min(self.width - 1, int(x + w - 1)))
+            y1 = max(y0, min(self.height - 1, int(y + h - 1)))
 
             rgb = np.asarray(img).reshape((-1, 3))
             r = (rgb[:, 0] >> 3).astype(np.uint16)

@@ -10,9 +10,10 @@
     "fps": 1
   },
   "telemetry": {
-    "interval_sec": 1.0,
+    "interval_sec": 0.25,
     "history_length": 30,
-    "mode": "sync"
+    "mode": "fluid",
+    "full_sync_sec": 60.0
   },
   "theme": {
     "background": [11, 15, 25],
