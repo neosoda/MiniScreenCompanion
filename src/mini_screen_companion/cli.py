@@ -13,7 +13,7 @@ from .core.config import AppConfig
 from .core.lock import ProcessLock, is_pid_alive
 from .collectors import get_dashboard_snapshot
 from .renderers import render_summary, render_detail, render_cozy_avatar
-from .screens import get_screen_client, GeekMagicScreen, LocalFileScreen
+from .screens import get_screen_client, GeekMagicScreen, GeekMagicSerialScreen, LocalFileScreen
 from .core.tamagotchi import TamagotchiBrain
 
 def setup_logging(level_name: str = "INFO", log_file: str = "dashboard.log"):
@@ -40,6 +40,31 @@ class CompanionApp:
         self.lock = ProcessLock()
         self.tamagotchi = TamagotchiBrain()
 
+    def _dispatch_screen_update(self, snapshot, act_cfg, frame: bytes) -> bool:
+        if isinstance(self.screen, GeekMagicSerialScreen):
+            p_map = {p.provider_id: p for p in snapshot.providers}
+            claude_p = p_map.get("claude")
+            codex_p = p_map.get("codex")
+            gemini_p = p_map.get("gemini")
+
+            claude_pct = int(claude_p.session_5h.remaining_pct) if (claude_p and claude_p.session_5h) else 95
+            codex_pct = int(codex_p.session_5h.remaining_pct) if (codex_p and codex_p.session_5h) else 80
+            gemini_pct = int(gemini_p.session_5h.remaining_pct) if (gemini_p and gemini_p.session_5h) else 65
+
+            act = act_cfg.action if act_cfg else "idle"
+            mood = act_cfg.status if act_cfg else "Au calme"
+            msg = mood or "Systeme pret"
+
+            return self.screen.update_hud(
+                claude=claude_pct,
+                codex=codex_pct,
+                gemini=gemini_pct,
+                act=act,
+                mood=mood,
+                msg=msg
+            )
+        return self.screen.upload_frame(frame)
+
     def run_once(self) -> bool:
         logging.info(f"Target display: {self.screen.__class__.__name__} ({self.config.screen.host})")
         snapshot = get_dashboard_snapshot(self.config, use_mock=self.use_mock)
@@ -49,9 +74,9 @@ class CompanionApp:
             w7 = f"{p.weekly_7d.remaining_pct:.0f}% ({p.weekly_7d.format_countdown()})" if p.weekly_7d else "N/A"
             logging.info(f"  {p.display_name}: 5H={s5} | 7J={w7}")
 
+        act_cfg = self.config.avatar
         mode = self.config.display.mode.lower()
         if mode in ("cozy", "retro", "avatar"):
-            act_cfg = self.config.avatar
             if act_cfg.action == "auto" or act_cfg.status == "auto":
                 act, mood = self.tamagotchi.update(snapshot)
                 act_cfg = replace(
@@ -66,7 +91,7 @@ class CompanionApp:
         else:
             frame = render_summary(snapshot)
 
-        ok = self.screen.upload_frame(frame)
+        ok = self._dispatch_screen_update(snapshot, act_cfg, frame)
         if ok:
             logging.info("Frame delivered successfully.")
         else:
@@ -141,7 +166,7 @@ class CompanionApp:
                     frame = render_summary(snapshot, time_str=time_str)
                     sleep_time = min(interval, 30)
 
-                self.screen.upload_frame(frame)
+                self._dispatch_screen_update(snapshot, act_cfg if 'act_cfg' in locals() else None, frame)
                 time.sleep(sleep_time)
 
             except Exception as e:

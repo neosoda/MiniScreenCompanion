@@ -42,6 +42,11 @@ class GeekMagicScreen(BaseScreen):
             return True
         try:
             h = {"Connection": "close"}
+            # 1. Lock slot 1 and disable stock slideshow slots 2-5
+            requests.get(f"{self.base_url}/file1-switch?getstate=1", headers=h, timeout=self.timeout)
+            for slot in range(2, 6):
+                requests.get(f"{self.base_url}/file{slot}-switch?getstate=0", headers=h, timeout=self.timeout)
+            # 2. Select Photo display theme (Theme 2)
             r = requests.get(f"{self.base_url}/themeselect?getstate=2", headers=h, timeout=self.timeout)
             self._configured_photo_mode = (r.status_code == 200)
             logger.info("Screen configured into single-slot Photo mode.")
