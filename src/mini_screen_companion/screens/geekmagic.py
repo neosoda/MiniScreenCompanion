@@ -1,9 +1,12 @@
 import hashlib
+import io
+import time
 import logging
 import socket
 import concurrent.futures
 from typing import Optional, List, Tuple
 import requests
+from PIL import Image
 from .base import BaseScreen
 
 logger = logging.getLogger(__name__)
@@ -13,14 +16,16 @@ class GeekMagicScreen(BaseScreen):
     Client for GeekMagic 'Smart Weather Clock' / SmallTV ESP8266 & ESP32 screens.
     Idempotent: skips network transmission when frame hash is unchanged.
     """
-    def __init__(self, host: str = "192.168.1.4", port: int = 80, timeout: int = 8):
+    def __init__(self, host: str = "192.168.1.4", port: int = 80, timeout: int = 8,
+                 min_upload_interval_seconds: int = 300):
         self.host = host
         self.port = port
         self.timeout = timeout
         self.base_url = f"http://{self.host}:{self.port}"
         self._last_frame_hash: Optional[str] = None
         self._configured_photo_mode: bool = False
-        self._slots_sanitized: bool = False
+        self._last_upload_at: float = 0.0
+        self._min_upload_interval = max(30, int(min_upload_interval_seconds))
 
     def is_reachable(self) -> bool:
         try:
@@ -52,61 +57,72 @@ class GeekMagicScreen(BaseScreen):
             # 2. Select Photo display theme (Theme 2)
             r = requests.get(f"{self.base_url}/themeselect?getstate=2", headers=h, timeout=self.timeout)
             self._configured_photo_mode = (r.status_code == 200)
-            logger.info("Screen configured into single-slot Photo mode (slideshow disabled).")
-            return True
+            if self._configured_photo_mode:
+                logger.info("Screen configured into single-slot Photo mode (slideshow disabled).")
+            return self._configured_photo_mode
         except Exception as e:
             logger.warning(f"Could not enforce single photo mode: {e}")
             return False
 
     def upload_frame(self, image_bytes: bytes, force: bool = False) -> bool:
-        # Idempotency check: Skip upload if image hash has not changed
-        current_hash = hashlib.sha256(image_bytes).hexdigest()
-        if not force and current_hash == self._last_frame_hash:
-            logger.debug("Frame unchanged (SHA-256 match), skipping upload.")
-            return True
+        """Upload a *single* photo safely, with deduplication and write pacing.
 
-        self.ensure_single_photo_mode()
-
+        The factory firmware is not assumed to play animated GIFs. Custom
+        firmware experiments are deliberately outside this stable code path.
+        """
         jpeg_payload = image_bytes
         if image_bytes.startswith((b"GIF87a", b"GIF89a")):
-            import io
-            from PIL import Image
             try:
                 with Image.open(io.BytesIO(image_bytes)) as gif:
                     gif.seek(0)
-                    buf = io.BytesIO()
-                    gif.convert("RGB").save(buf, format="JPEG", quality=80)
-                    jpeg_payload = buf.getvalue()
-            except Exception as ex:
-                logger.warning(f"Could not convert GIF to JPEG for GeekMagic: {ex}")
+                    buffer = io.BytesIO()
+                    gif.convert("RGB").save(buffer, format="JPEG", quality=80)
+                    jpeg_payload = buffer.getvalue()
+            except Exception as exc:
+                logger.error("GIF to static JPEG conversion failed: %s", exc)
+                return False
+
+        if not jpeg_payload.startswith(b"\xff\xd8"):
+            logger.error("Factory photo mode only supports JPEG uploads.")
+            return False
+
+        current_hash = hashlib.sha256(jpeg_payload).hexdigest()
+        if not force and current_hash == self._last_frame_hash:
+            return True
+
+        # Photo updates can persist in device flash. Never stream animations
+        # to the factory HTTP /upload endpoint.
+        if not force and self._last_upload_at:
+            if time.monotonic() - self._last_upload_at < self._min_upload_interval:
+                return True  # Coalesced; next iteration sends the newest image.
+
+        if not self.ensure_single_photo_mode():
+            logger.warning("Could not confirm Photo mode; attempting JPEG upload.")
 
         files = {"imageFile": ("file1.jpg", jpeg_payload, "image/jpeg")}
         try:
-            r = requests.post(f"{self.base_url}/upload", files=files, headers={"Connection": "close"}, timeout=self.timeout)
-            success = r.status_code == 200 or "successful" in r.text.lower()
-        except requests.exceptions.RequestException as e:
-            err_str = str(e).lower()
-            success = "data after connection: close" in err_str or "upload successful" in err_str
+            response = requests.post(
+                f"{self.base_url}/upload",
+                files=files,
+                headers={"Connection": "close"},
+                timeout=self.timeout,
+            )
+            success = response.status_code == 200 or "successful" in response.text.lower()
+        except requests.exceptions.RequestException as exc:
+            detail = str(exc).lower()
+            success = "data after connection: close" in detail or "upload successful" in detail
             if not success:
-                logger.error(f"Connection error uploading frame to {self.base_url}: {e}")
+                logger.error("Upload failed at %s: %s", self.base_url, exc)
                 return False
 
-        if success:
-            self._last_frame_hash = current_hash
-            logger.debug("Frame uploaded successfully.")
-            # Sanitize secondary slideshow slots (2-5) once so factory photos are permanently eradicated
-            if not self._slots_sanitized:
-                self._slots_sanitized = True
-                for slot_idx in range(2, 6):
-                    try:
-                        s_files = {"imageFile": (f"file{slot_idx}.jpg", jpeg_payload, "image/jpeg")}
-                        requests.post(f"{self.base_url}/upload", files=s_files, headers={"Connection": "close"}, timeout=self.timeout)
-                    except Exception:
-                        pass
-            return True
-        else:
-            logger.error("Screen upload failed.")
+        if not success:
+            logger.error("Screen rejected JPEG upload.")
             return False
+
+        self._last_frame_hash = current_hash
+        self._last_upload_at = time.monotonic()
+        logger.debug("One JPEG slot updated; other photo slots were left untouched.")
+        return True
 
     @classmethod
     def discover_on_subnet(cls, subnet_prefix: str = "192.168.1", max_workers: int = 50) -> List[Tuple[str, str]]:

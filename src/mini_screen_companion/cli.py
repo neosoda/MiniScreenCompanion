@@ -59,7 +59,8 @@ class CompanionApp:
                     action=act if act_cfg.action == "auto" else act_cfg.action,
                     status=mood if act_cfg.status == "auto" else act_cfg.status
                 )
-            frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg)
+            frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg,
+                                       animated=not isinstance(self.screen, GeekMagicScreen))
         elif mode in ("claude", "codex", "gemini"):
             p = next((x for x in snapshot.providers if x.provider_id == mode), snapshot.providers[0])
             frame = render_detail(p)
@@ -68,7 +69,7 @@ class CompanionApp:
 
         ok = self.screen.upload_frame(frame)
         if ok:
-            logging.info("Frame delivered successfully.")
+            logging.info("Frame processed successfully (uploaded, unchanged or rate-limited).")
         else:
             logging.error("Failed to upload frame to screen.")
         return ok
@@ -118,9 +119,12 @@ class CompanionApp:
                             action=act if act_cfg.action == "auto" else act_cfg.action,
                             status=mood if act_cfg.status == "auto" else act_cfg.status
                         )
-                    frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg, time_str=time_str, frame_offset=loop_counter)
+                    is_photo_screen = isinstance(self.screen, GeekMagicScreen)
+                    phase = int(now // 300) if is_photo_screen else loop_counter
+                    frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg, time_str=time_str,
+                                               animated=not is_photo_screen, frame_offset=phase)
                     loop_counter += 1
-                    sleep_time = min(interval, 20)
+                    sleep_time = max(60, interval) if is_photo_screen else min(interval, 20)
                 elif mode == "carousel" and snapshot.providers:
                     # Alternates Summary with large provider views
                     pages = ["summary"] + [p.provider_id for p in snapshot.providers]
@@ -147,6 +151,13 @@ class CompanionApp:
             except Exception as e:
                 logging.error(f"Loop iteration error: {e}")
                 time.sleep(10)
+
+def cmd_studio(args):
+    """Open local Companion Studio; no firmware or screen I/O."""
+    from .studio import serve_studio
+    serve_studio(config_path=args.config, port=args.port,
+                 open_browser=not args.no_open, demo=args.demo)
+
 
 def cmd_discover(args):
     """Scan local subnet for GeekMagic screens."""
@@ -261,9 +272,15 @@ def main():
 
     # preview
     p_prev = subparsers.add_parser("preview", help="Render and save preview image locally")
-    p_prev.add_argument("-o", "--output", default="preview.jpg", help="Output file path")
+    p_prev.add_argument("-o", "--output", default=None, help="Output file path")
     p_prev.add_argument("--open", action="store_true", help="Open image viewer automatically")
     p_prev.add_argument("--demo", action="store_true", help="Use realistic demonstration data without credentials")
+
+    # Studio — local browser UI; never uploads to the device.
+    p_studio = subparsers.add_parser("studio", help="Open local Living Companion visual editor")
+    p_studio.add_argument("--port", type=int, default=8765, help="Local-only web port")
+    p_studio.add_argument("--no-open", action="store_true", help="Do not launch a browser")
+    p_studio.add_argument("--demo", action="store_true", help="Use fake quotas in preview only")
 
     # discover
     p_disc = subparsers.add_parser("discover", help="Scan local network for GeekMagic screens")
@@ -280,6 +297,9 @@ def main():
         return
     elif args.command == "preview":
         cmd_preview(args)
+        return
+    elif args.command == "studio":
+        cmd_studio(args)
         return
     elif args.command == "status":
         cmd_status(args)

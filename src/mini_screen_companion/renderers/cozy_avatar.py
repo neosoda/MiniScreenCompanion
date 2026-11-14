@@ -18,6 +18,8 @@ from .avatar_sprites import (
     create_sleep_avatar,
     load_custom_frames
 )
+from .ambient import create_ambient_cat
+from .effects import draw_atmosphere
 
 def _load_retro_fonts():
     """Load crisp typography for 1/3 - 2/3 layout."""
@@ -116,35 +118,35 @@ def render_quotas_2_3_panel(
             continue
 
         # 3. 5H Session Line
-        rem_5h = p.session_5h.remaining_pct if p.session_5h else 0.0
-        used_5h = p.session_5h.used_pct if p.session_5h else 0.0
         r5_str = p.session_5h.format_countdown() if p.session_5h else "--"
-        pct_5h = used_5h if is_used else rem_5h
-        col_5h = _get_gauge_color(pct_5h, is_used=is_used)
+        pct_5h = ((p.session_5h.used_pct if is_used else p.session_5h.remaining_pct)
+                  if p.session_5h else None)
+        col_5h = _get_gauge_color(pct_5h, is_used=is_used) if pct_5h is not None else (148, 163, 184)
 
         d.text((9, y + 22), "5H", fill=(148, 163, 184, 255), font=RETRO_FONTS["badge"])
-        d.text((25, y + 20), f"{int(round(pct_5h))}%", fill=col_5h, font=RETRO_FONTS["mono_sm"])
+        d.text((25, y + 20), f"{int(round(pct_5h))}%" if pct_5h is not None else "--",
+               fill=col_5h, font=RETRO_FONTS["mono_sm"])
 
         # 5H Bar (x=52 to 175, w=123, h=5)
         d.rectangle([52, y + 24, 175, y + 29], fill=(18, 26, 46, 255))
-        bw5 = int(123 * (pct_5h / 100.0))
+        bw5 = int(123 * ((pct_5h or 0.0) / 100.0))
         if bw5 > 0:
             d.rectangle([52, y + 24, 52 + bw5, y + 29], fill=col_5h)
         d.text((182, y + 20), r5_str, fill=(203, 213, 225, 255), font=RETRO_FONTS["mono_sm"])
 
         # 4. 7J Weekly Line
-        rem_7d = p.weekly_7d.remaining_pct if p.weekly_7d else 0.0
-        used_7d = p.weekly_7d.used_pct if p.weekly_7d else 0.0
         r7_str = p.weekly_7d.format_countdown() if p.weekly_7d else "--"
-        pct_7d = used_7d if is_used else rem_7d
-        col_7d = (56, 189, 248) if not is_used else _get_gauge_color(pct_7d, is_used=True)
+        pct_7d = ((p.weekly_7d.used_pct if is_used else p.weekly_7d.remaining_pct)
+                  if p.weekly_7d else None)
+        col_7d = _get_gauge_color(pct_7d, is_used=is_used) if pct_7d is not None else (148, 163, 184)
 
         d.text((9, y + 36), "7J", fill=(148, 163, 184, 255), font=RETRO_FONTS["badge"])
-        d.text((25, y + 34), f"{int(round(pct_7d))}%", fill=col_7d, font=RETRO_FONTS["mono_sm"])
+        d.text((25, y + 34), f"{int(round(pct_7d))}%" if pct_7d is not None else "--",
+               fill=col_7d, font=RETRO_FONTS["mono_sm"])
 
         # 7J Bar
         d.rectangle([52, y + 38, 175, y + 43], fill=(18, 26, 46, 255))
-        bw7 = int(123 * (pct_7d / 100.0))
+        bw7 = int(123 * ((pct_7d or 0.0) / 100.0))
         if bw7 > 0:
             d.rectangle([52, y + 38, 52 + bw7, y + 43], fill=col_7d)
         d.text((182, y + 34), r7_str, fill=(203, 213, 225, 255), font=RETRO_FONTS["mono_sm"])
@@ -171,18 +173,33 @@ def render_cozy_avatar(
     if not time_str:
         time_str = now.strftime("%H:%M")
 
+    try:
+        hour = int(time_str.split(":")[0])
+        if not 0 <= hour <= 23:
+            raise ValueError("hour out of range")
+    except (ValueError, IndexError):
+        hour = now.hour
+
     # 1. Action & mood status
-    action = avatar_cfg.action.lower()
+    requested_action = avatar_cfg.action.lower()
+    action = requested_action
     status_msg = avatar_cfg.status
 
     if action == "auto" or status_msg == "auto":
-        auto_act, auto_stat = get_auto_mood(now.hour)
+        auto_act, auto_stat = get_auto_mood(hour)
         if action == "auto":
             action = auto_act
         if status_msg == "auto":
-            status_msg = auto_stat
+            labels = {"desk": "Dans le flow", "coffee": "Pause cafe",
+                      "pet": "Calin au chat", "run": "En balade", "sleep": "Zzz..."}
+            status_msg = auto_stat if requested_action == "auto" else labels.get(action, "")
 
-    # 2. Render static top 1/3 room background (y=0 to 78)
+    # 2. Manual atmosphere presets override the clock only in the renderer.
+    selected_scene = avatar_cfg.scene if avatar_cfg.scene in ("auto", "day", "night", "rain") else "auto"
+    scene = ("night" if hour >= 20 or hour < 7 else "day") if selected_scene == "auto" else selected_scene
+    is_night = scene == "night"
+
+    # Render top 1/3 room background (y=0 to 78)
     show_stool = (action != "desk" and action != "pet" and action != "sleep")
     room_bg = render_room_1_3_background(
         user_name=avatar_cfg.name,
@@ -191,7 +208,9 @@ def render_cozy_avatar(
         font_mono_hdr=RETRO_FONTS["hdr_user"],
         font_ui_stat=RETRO_FONTS["ui_stat"],
         font_mono_clock=RETRO_FONTS["clock"],
-        show_stool=show_stool
+        show_stool=show_stool,
+        is_night=is_night,
+        palette=avatar_cfg.palette
     )
 
     # 3. Pre-render bottom 2/3 quotas panel (y=80 to 240)
@@ -205,7 +224,8 @@ def render_cozy_avatar(
     assets_dir = base_dir / "assets"
     custom_frames = load_custom_frames(assets_dir) if avatar_cfg.animated else None
 
-    frames_count = 8
+    # Stock HTTP firmware receives JPEG; do not render eight throwaway frames.
+    frames_count = 8 if animated and avatar_cfg.animated else 1
     frame_images = []
 
     avatar_y = 38
@@ -214,42 +234,51 @@ def render_cozy_avatar(
         offsets = [-12, -6, 0, 6, 12, 6, 0, -6]
     elif action == "desk":
         avatar_base_x = 92
-        offsets = [0] * frames_count
+        offsets = [0] * 8
     elif action == "coffee":
         avatar_base_x = 135 # near window
-        offsets = [0] * frames_count
+        offsets = [0] * 8
     elif action == "pet":
         avatar_base_x = 90
-        offsets = [0] * frames_count
+        offsets = [0] * 8
     elif action == "sleep":
         avatar_base_x = 88
-        offsets = [0] * frames_count
+        offsets = [0] * 8
     else:
         avatar_base_x = 95
-        offsets = [0] * frames_count
+        offsets = [0] * 8
 
     for i in range(frames_count):
+        phase = (i + frame_offset) % 8
         frame = Image.new("RGBA", (240, 240), (7, 11, 26, 255))
         frame.paste(room_bg, (0, 0), room_bg)
 
         # Get sprite
         if custom_frames:
-            avatar_sprite = custom_frames[i % len(custom_frames)]
+            avatar_sprite = custom_frames[phase % len(custom_frames)]
         elif action == "run":
-            avatar_sprite = create_runner_avatar(i)
+            avatar_sprite = create_runner_avatar(phase)
         elif action == "desk":
-            avatar_sprite = create_desk_avatar(i)
+            avatar_sprite = create_desk_avatar(phase)
         elif action == "coffee":
-            avatar_sprite = create_coffee_avatar(i)
+            avatar_sprite = create_coffee_avatar(phase)
         elif action == "pet":
-            avatar_sprite = create_pet_avatar(i)
+            avatar_sprite = create_pet_avatar(phase)
         elif action == "sleep":
-            avatar_sprite = create_sleep_avatar(i)
+            avatar_sprite = create_sleep_avatar(phase)
         else:
-            avatar_sprite = create_runner_avatar(i)
+            avatar_sprite = create_desk_avatar(phase)
 
-        cur_x = avatar_base_x + offsets[i]
+        cur_x = avatar_base_x + offsets[phase]
         frame.paste(avatar_sprite, (cur_x, avatar_y), avatar_sprite)
+
+        # A separate companion inhabits the room even while the developer codes.
+        if avatar_cfg.show_cat and action != "pet":
+            room_cat = create_ambient_cat(phase, sleeping=(action == "sleep"))
+            cat_x = 174 + (-2, -1, 0, 1, 2, 1, 0, -1)[phase]
+            frame.paste(room_cat, (cat_x, 57), room_cat)
+
+        draw_atmosphere(frame, scene, phase, action, enabled=avatar_cfg.effects)
 
         # Paste bottom quotas panel (y=80 to 240)
         frame.paste(quotas_panel, (0, 80), quotas_panel)
@@ -257,13 +286,9 @@ def render_cozy_avatar(
         frame_rgb = frame.convert("RGB")
         frame_images.append(frame_rgb)
 
-    if frame_offset:
-        shift = frame_offset % len(frame_images)
-        frame_images = frame_images[shift:] + frame_images[:shift]
-
     buf = io.BytesIO()
     if animated and avatar_cfg.animated:
-        duration_ms = max(50, int(1000 / max(1, avatar_cfg.fps)))
+        duration_ms = max(80, int(1000 / max(1, min(12, avatar_cfg.fps))))
         frame_images[0].save(
             buf,
             format="GIF",

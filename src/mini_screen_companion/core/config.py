@@ -1,5 +1,6 @@
 import os
 import json
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -11,6 +12,7 @@ class ScreenConfig:
     port: int = 80
     timeout: int = 8
     brightness: int = 85
+    min_upload_interval_seconds: int = 300  # Limit stock photo-mode flash writes
 
 @dataclass
 class DisplayConfig:
@@ -20,11 +22,15 @@ class DisplayConfig:
 @dataclass
 class AvatarConfig:
     name: str = ""
-    status: str = ""
+    status: str = "auto"
     action: str = "run"    # "run", "desk", "coffee", "pet", "sleep", "auto"
     animated: bool = True
     fps: int = 8
     metric: str = "remaining"   # "remaining" or "used"
+    scene: str = "auto"        # auto, day, night, rain
+    palette: str = "warm"      # warm, mint, lavender
+    show_cat: bool = True
+    effects: bool = True
 
 @dataclass
 class PollingConfig:
@@ -66,7 +72,9 @@ class AppConfig:
                         host=s.get("host", cfg.screen.host),
                         port=s.get("port", cfg.screen.port),
                         timeout=s.get("timeout", cfg.screen.timeout),
-                        brightness=s.get("brightness", cfg.screen.brightness)
+                        brightness=s.get("brightness", cfg.screen.brightness),
+                        min_upload_interval_seconds=max(30, int(s.get(
+                            "min_upload_interval_seconds", cfg.screen.min_upload_interval_seconds)))
                     )
                 if "display" in data:
                     d = data["display"]
@@ -82,7 +90,11 @@ class AppConfig:
                         action=a.get("action", cfg.avatar.action),
                         animated=a.get("animated", cfg.avatar.animated),
                         fps=a.get("fps", cfg.avatar.fps),
-                        metric=a.get("metric", cfg.avatar.metric)
+                        metric=a.get("metric", cfg.avatar.metric),
+                        scene=a.get("scene", cfg.avatar.scene),
+                        palette=a.get("palette", cfg.avatar.palette),
+                        show_cat=a.get("show_cat", cfg.avatar.show_cat),
+                        effects=a.get("effects", cfg.avatar.effects)
                     )
                 if "polling" in data:
                     p = data["polling"]
@@ -98,8 +110,8 @@ class AppConfig:
                     )
                 if "providers" in data:
                     cfg.providers = data["providers"]
-            except Exception as e:
-                print(f"[Config] Warning: Failed to parse {config_file} ({e}), using defaults.")
+            except (OSError, ValueError, TypeError, KeyError) as e:
+                raise ValueError(f"Invalid config file {config_file}: {e}") from e
 
         # Environment variable overrides
         if "AI_SCREEN_HOST" in os.environ:
@@ -126,7 +138,8 @@ class AppConfig:
                 "host": self.screen.host,
                 "port": self.screen.port,
                 "timeout": self.screen.timeout,
-                "brightness": self.screen.brightness
+                "brightness": self.screen.brightness,
+                "min_upload_interval_seconds": self.screen.min_upload_interval_seconds
             },
             "display": {
                 "mode": self.display.mode,
@@ -138,7 +151,11 @@ class AppConfig:
                 "action": self.avatar.action,
                 "animated": self.avatar.animated,
                 "fps": self.avatar.fps,
-                "metric": self.avatar.metric
+                "metric": self.avatar.metric,
+                "scene": self.avatar.scene,
+                "palette": self.avatar.palette,
+                "show_cat": self.avatar.show_cat,
+                "effects": self.avatar.effects
             },
             "polling": {
                 "refresh_interval_seconds": self.polling.refresh_interval_seconds,
@@ -150,5 +167,26 @@ class AppConfig:
                 "file": self.logging.file
             }
         }
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # Preserve unrelated keys (including those from newer installations).
+        if target.is_file():
+            existing = json.loads(target.read_text(encoding="utf-8"))
+            if not isinstance(existing, dict):
+                raise ValueError("Configuration root must be a JSON object")
+            for key, value in existing.items():
+                if key not in data:
+                    data[key] = value
+                elif isinstance(value, dict) and isinstance(data[key], dict):
+                    data[key] = {**value, **data[key]}
+        fd, temporary = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp",
+                                          dir=str(target.parent))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=2)
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(temporary, target)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)

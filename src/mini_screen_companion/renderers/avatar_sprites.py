@@ -71,14 +71,21 @@ def render_room_1_3_background(
     font_ui_stat: ImageFont.ImageFont,
     font_mono_clock: ImageFont.ImageFont,
     show_stool: bool = True,
-    is_night: bool = False
+    is_night: bool = False,
+    palette: str = "warm"
 ) -> Image.Image:
     """Renders the top 1/3 (y=0 to 78) cozy pixel room with day or night atmosphere."""
     img = Image.new("RGBA", (240, 78), (7, 11, 26, 255))
     d = ImageDraw.Draw(img)
 
     # Wallpaper (Warm cream day, or soft cozy twilight night)
-    wall_color = (245, 238, 226, 255) if not is_night else (220, 214, 206, 255)
+    palettes = {
+        "warm": ((245, 238, 226, 255), (40, 49, 71, 255), (218, 158, 105, 255)),
+        "mint": ((220, 244, 226, 255), (34, 60, 62, 255), (190, 154, 112, 255)),
+        "lavender": ((237, 227, 246, 255), (58, 43, 78, 255), (201, 156, 187, 255)),
+    }
+    day_wall, night_wall, floor_color = palettes.get(palette, palettes["warm"])
+    wall_color = night_wall if is_night else day_wall
     d.rectangle([0, 0, 240, 56], fill=wall_color)
 
     if not is_night:
@@ -131,7 +138,7 @@ def render_room_1_3_background(
 
     # Wooden parquet floor (y=56 to 78)
     d.rectangle([0, 56, 240, 58], fill=(115, 72, 38, 255))
-    d.rectangle([0, 59, 240, 78], fill=(218, 158, 105, 255))
+    d.rectangle([0, 59, 240, 78], fill=floor_color if not is_night else (113, 85, 75, 255))
     for px in [40, 90, 140, 190]:
         d.line([px, 59, px, 78], fill=(185, 125, 75, 255), width=1)
 

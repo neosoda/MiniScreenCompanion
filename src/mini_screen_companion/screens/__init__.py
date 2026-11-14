@@ -13,7 +13,8 @@ def get_screen_client(config: ScreenConfig) -> BaseScreen:
     return GeekMagicScreen(
         host=config.host,
         port=config.port,
-        timeout=config.timeout
+        timeout=config.timeout,
+        min_upload_interval_seconds=config.min_upload_interval_seconds
     )
 
 __all__ = ["BaseScreen", "GeekMagicScreen", "LocalFileScreen", "get_screen_client"]

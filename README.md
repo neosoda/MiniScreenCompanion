@@ -236,3 +236,23 @@ print('ALL TESTS PASSED!')
 
 Distributed under the **MIT License**. See `LICENSE` for details.  
 Copyright &copy; 2026 [neosoda](https://github.com/neosoda).
+
+
+## 🚧 Living Companion 2.0 — Foundation
+
+- Time-based pet behaviors (not coupled to network refresh loops).
+- Independent animated cat, day/night lighting and eight-frame local GIF preview.
+- Unavailable quotas are not silently replaced by fake numbers; `--demo` remains explicit.
+- Factory GeekMagic HTTP: **static JPEG only until native animation is proven**. Default photo-write pacing: 300 seconds via `screen.min_upload_interval_seconds`.
+- Secondary factory photo slots are no longer overwritten.
+
+See [V2 implementation notes](docs/LIVING_COMPANION_V2.md).
+
+
+### 🎨 Companion Studio (local visual editor)
+
+```bash
+python -m mini_screen_companion studio --demo
+```
+
+Open `http://127.0.0.1:8765/`. Choose scenes, palettes, independent cat, atmospheric effects, animation FPS and export a GIF. Settings are stored in `config.json`. Studio does **not** send data to the physical device.
