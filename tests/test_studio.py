@@ -72,3 +72,27 @@ def test_studio_is_loopback_and_never_uploads(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join(timeout=3)
+
+
+
+def test_invalid_setting_does_not_mutate_existing_config(tmp_path):
+    path = tmp_path / "config.json"
+    cfg = AppConfig()
+    cfg.save(str(path))
+    before = path.read_bytes()
+    with pytest.raises(ValueError):
+        coerce_avatar({"fps": 0}, cfg.avatar)
+    assert path.read_bytes() == before
+
+
+def test_config_save_preserves_unrelated_extensions(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"avatar": {"custom_plugin": "untouched"},
+                                "extra_section": {"enabled": True}}), encoding="utf-8")
+    cfg = AppConfig.load(str(path))
+    cfg.avatar.name = "Updated"
+    cfg.save(str(path))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["avatar"]["custom_plugin"] == "untouched"
+    assert data["extra_section"]["enabled"]
+    assert data["avatar"]["name"] == "Updated"

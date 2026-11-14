@@ -169,6 +169,16 @@ class AppConfig:
         }
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
+        # Preserve unrelated keys (including those from newer installations).
+        if target.is_file():
+            existing = json.loads(target.read_text(encoding="utf-8"))
+            if not isinstance(existing, dict):
+                raise ValueError("Configuration root must be a JSON object")
+            for key, value in existing.items():
+                if key not in data:
+                    data[key] = value
+                elif isinstance(value, dict) and isinstance(data[key], dict):
+                    data[key] = {**value, **data[key]}
         fd, temporary = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp",
                                           dir=str(target.parent))
         try:

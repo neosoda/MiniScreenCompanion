@@ -84,9 +84,7 @@ ne reçoit pas ces animations.</div></section>
 <div><label for="palette">Palette</label><select id="palette">
 <option value="warm">Warm</option><option value="mint">Mint</option>
 <option value="lavender">Lavender</option></select></div>
-<div><label for="fps">Images / seconde</label><select id="fps">
-<option value="4">4 FPS</option><option value="6">6 FPS</option>
-<option value="8">8 FPS</option><option value="12">12 FPS</option></select></div>
+<div><label for="fps">Images / seconde</label><input id="fps" type="number" min="1" max="12" value="8"></div>
 </div>
 <label class="check"><input type="checkbox" id="show_cat" checked>Afficher le chat</label>
 <label class="check"><input type="checkbox" id="effects" checked>Microanimations et météo</label>
@@ -175,8 +173,8 @@ def coerce_avatar(data, current):
     fields["name"] = name
 
     fps = data.get("fps", current.fps)
-    if type(fps) is not int or fps not in (4, 6, 8, 12):
-        raise ValueError("FPS incorrect (4, 6, 8 ou 12).")
+    if type(fps) is not int or not 1 <= fps <= 12:
+        raise ValueError("FPS incorrect (entre 1 et 12).")
     fields["fps"] = fps
 
     for key in ("show_cat", "effects"):
@@ -239,7 +237,7 @@ def create_studio_server(config_path="config.json", port=8765, demo=False):
                             if value not in ("true", "false"):
                                 raise ValueError("Booleen incorrect")
                             choices[key] = value == "true"
-                    avatar = coerce_avatar(choices, cfg.avatar)
+                    avatar = replace(coerce_avatar(choices, cfg.avatar), animated=True)
                     request_demo = query.get("demo", ["1" if demo else "0"])[-1] == "1"
                     snapshot = get_dashboard_snapshot(cfg, use_mock=request_demo)
                     data = render_cozy_avatar(snapshot, avatar_cfg=avatar, animated=True)
@@ -275,7 +273,7 @@ def create_studio_server(config_path="config.json", port=8765, demo=False):
                 cfg.avatar = next_avatar
                 try:
                     cfg.save(str(config_path))
-                except OSError:
+                except Exception:
                     cfg.avatar = previous
                     raise
                 return self._json(200, {"saved": True})

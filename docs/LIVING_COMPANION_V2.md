@@ -78,3 +78,9 @@ python -m mini_screen_companion studio --demo
 
 Le mode `--demo` ne simule les quotas que dans l'aperçu ; il n'altère
 pas le mode normal.
+
+
+Configuration safety: Studio only applies allowlisted avatar settings; profile changes
+preserve unknown configuration keys and save by atomic replacement. The animation
+FPS setting supports 1–12 frames/second. The Studio GIF preview is always
+animated, even if the physical display has animation disabled in config.
