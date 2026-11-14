@@ -118,35 +118,35 @@ def render_quotas_2_3_panel(
             continue
 
         # 3. 5H Session Line
-        rem_5h = p.session_5h.remaining_pct if p.session_5h else 0.0
-        used_5h = p.session_5h.used_pct if p.session_5h else 0.0
         r5_str = p.session_5h.format_countdown() if p.session_5h else "--"
-        pct_5h = used_5h if is_used else rem_5h
-        col_5h = _get_gauge_color(pct_5h, is_used=is_used)
+        pct_5h = ((p.session_5h.used_pct if is_used else p.session_5h.remaining_pct)
+                  if p.session_5h else None)
+        col_5h = _get_gauge_color(pct_5h, is_used=is_used) if pct_5h is not None else (148, 163, 184)
 
         d.text((9, y + 22), "5H", fill=(148, 163, 184, 255), font=RETRO_FONTS["badge"])
-        d.text((25, y + 20), f"{int(round(pct_5h))}%", fill=col_5h, font=RETRO_FONTS["mono_sm"])
+        d.text((25, y + 20), f"{int(round(pct_5h))}%" if pct_5h is not None else "--",
+               fill=col_5h, font=RETRO_FONTS["mono_sm"])
 
         # 5H Bar (x=52 to 175, w=123, h=5)
         d.rectangle([52, y + 24, 175, y + 29], fill=(18, 26, 46, 255))
-        bw5 = int(123 * (pct_5h / 100.0))
+        bw5 = int(123 * ((pct_5h or 0.0) / 100.0))
         if bw5 > 0:
             d.rectangle([52, y + 24, 52 + bw5, y + 29], fill=col_5h)
         d.text((182, y + 20), r5_str, fill=(203, 213, 225, 255), font=RETRO_FONTS["mono_sm"])
 
         # 4. 7J Weekly Line
-        rem_7d = p.weekly_7d.remaining_pct if p.weekly_7d else 0.0
-        used_7d = p.weekly_7d.used_pct if p.weekly_7d else 0.0
         r7_str = p.weekly_7d.format_countdown() if p.weekly_7d else "--"
-        pct_7d = used_7d if is_used else rem_7d
-        col_7d = (56, 189, 248) if not is_used else _get_gauge_color(pct_7d, is_used=True)
+        pct_7d = ((p.weekly_7d.used_pct if is_used else p.weekly_7d.remaining_pct)
+                  if p.weekly_7d else None)
+        col_7d = _get_gauge_color(pct_7d, is_used=is_used) if pct_7d is not None else (148, 163, 184)
 
         d.text((9, y + 36), "7J", fill=(148, 163, 184, 255), font=RETRO_FONTS["badge"])
-        d.text((25, y + 34), f"{int(round(pct_7d))}%", fill=col_7d, font=RETRO_FONTS["mono_sm"])
+        d.text((25, y + 34), f"{int(round(pct_7d))}%" if pct_7d is not None else "--",
+               fill=col_7d, font=RETRO_FONTS["mono_sm"])
 
         # 7J Bar
         d.rectangle([52, y + 38, 175, y + 43], fill=(18, 26, 46, 255))
-        bw7 = int(123 * (pct_7d / 100.0))
+        bw7 = int(123 * ((pct_7d or 0.0) / 100.0))
         if bw7 > 0:
             d.rectangle([52, y + 38, 52 + bw7, y + 43], fill=col_7d)
         d.text((182, y + 34), r7_str, fill=(203, 213, 225, 255), font=RETRO_FONTS["mono_sm"])
