@@ -18,6 +18,7 @@ from .avatar_sprites import (
     create_sleep_avatar,
     load_custom_frames
 )
+from .ambient import create_ambient_cat
 
 def _load_retro_fonts():
     """Load crisp typography for 1/3 - 2/3 layout."""
@@ -182,7 +183,14 @@ def render_cozy_avatar(
         if status_msg == "auto":
             status_msg = auto_stat
 
-    # 2. Render static top 1/3 room background (y=0 to 78)
+    # 2. Real day/night cycle. Explicit preview time takes precedence.
+    try:
+        hour = int(time_str.split(":")[0])
+    except (ValueError, IndexError):
+        hour = now.hour
+    is_night = hour >= 20 or hour < 7
+
+    # Render top 1/3 room background (y=0 to 78)
     show_stool = (action != "desk" and action != "pet" and action != "sleep")
     room_bg = render_room_1_3_background(
         user_name=avatar_cfg.name,
@@ -191,7 +199,8 @@ def render_cozy_avatar(
         font_mono_hdr=RETRO_FONTS["hdr_user"],
         font_ui_stat=RETRO_FONTS["ui_stat"],
         font_mono_clock=RETRO_FONTS["clock"],
-        show_stool=show_stool
+        show_stool=show_stool,
+        is_night=is_night
     )
 
     # 3. Pre-render bottom 2/3 quotas panel (y=80 to 240)
@@ -205,7 +214,8 @@ def render_cozy_avatar(
     assets_dir = base_dir / "assets"
     custom_frames = load_custom_frames(assets_dir) if avatar_cfg.animated else None
 
-    frames_count = 8
+    # Stock HTTP firmware receives JPEG; do not render eight throwaway frames.
+    frames_count = 8 if animated and avatar_cfg.animated else 1
     frame_images = []
 
     avatar_y = 38
@@ -229,37 +239,44 @@ def render_cozy_avatar(
         offsets = [0] * frames_count
 
     for i in range(frames_count):
+        phase = (i + frame_offset) % 8
         frame = Image.new("RGBA", (240, 240), (7, 11, 26, 255))
         frame.paste(room_bg, (0, 0), room_bg)
 
         # Get sprite
         if custom_frames:
-            avatar_sprite = custom_frames[i % len(custom_frames)]
+            avatar_sprite = custom_frames[phase % len(custom_frames)]
         elif action == "run":
-            avatar_sprite = create_runner_avatar(i)
+            avatar_sprite = create_runner_avatar(phase)
         elif action == "desk":
-            avatar_sprite = create_desk_avatar(i)
+            avatar_sprite = create_desk_avatar(phase)
         elif action == "coffee":
-            avatar_sprite = create_coffee_avatar(i)
+            avatar_sprite = create_coffee_avatar(phase)
         elif action == "pet":
-            avatar_sprite = create_pet_avatar(i)
+            avatar_sprite = create_pet_avatar(phase)
         elif action == "sleep":
-            avatar_sprite = create_sleep_avatar(i)
+            avatar_sprite = create_sleep_avatar(phase)
         else:
             avatar_sprite = create_runner_avatar(i)
 
-        cur_x = avatar_base_x + offsets[i]
+        cur_x = avatar_base_x + offsets[phase]
         frame.paste(avatar_sprite, (cur_x, avatar_y), avatar_sprite)
+
+        # A separate companion inhabits the room even while the developer codes.
+        if action != "pet":
+            room_cat = create_ambient_cat(phase, sleeping=(action == "sleep"))
+            frame.paste(room_cat, (174, 57), room_cat)
+
+        if is_night:
+            # Tiny twinkles outside the window, visible in the GIF animation.
+            glint = ImageDraw.Draw(frame)
+            glint.point((176 + (phase % 3) * 4, 20), fill=(252, 231, 168, 255))
 
         # Paste bottom quotas panel (y=80 to 240)
         frame.paste(quotas_panel, (0, 80), quotas_panel)
 
         frame_rgb = frame.convert("RGB")
         frame_images.append(frame_rgb)
-
-    if frame_offset:
-        shift = frame_offset % len(frame_images)
-        frame_images = frame_images[shift:] + frame_images[:shift]
 
     buf = io.BytesIO()
     if animated and avatar_cfg.animated:

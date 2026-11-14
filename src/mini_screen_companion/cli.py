@@ -59,7 +59,8 @@ class CompanionApp:
                     action=act if act_cfg.action == "auto" else act_cfg.action,
                     status=mood if act_cfg.status == "auto" else act_cfg.status
                 )
-            frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg)
+            frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg,
+                                       animated=not isinstance(self.screen, GeekMagicScreen))
         elif mode in ("claude", "codex", "gemini"):
             p = next((x for x in snapshot.providers if x.provider_id == mode), snapshot.providers[0])
             frame = render_detail(p)
@@ -118,9 +119,12 @@ class CompanionApp:
                             action=act if act_cfg.action == "auto" else act_cfg.action,
                             status=mood if act_cfg.status == "auto" else act_cfg.status
                         )
-                    frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg, time_str=time_str, frame_offset=loop_counter)
+                    is_photo_screen = isinstance(self.screen, GeekMagicScreen)
+                    phase = int(now // 300) if is_photo_screen else loop_counter
+                    frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg, time_str=time_str,
+                                               animated=not is_photo_screen, frame_offset=phase)
                     loop_counter += 1
-                    sleep_time = min(interval, 20)
+                    sleep_time = max(60, interval) if is_photo_screen else min(interval, 20)
                 elif mode == "carousel" and snapshot.providers:
                     # Alternates Summary with large provider views
                     pages = ["summary"] + [p.provider_id for p in snapshot.providers]

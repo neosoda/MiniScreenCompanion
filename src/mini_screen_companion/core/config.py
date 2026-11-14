@@ -11,6 +11,7 @@ class ScreenConfig:
     port: int = 80
     timeout: int = 8
     brightness: int = 85
+    min_upload_interval_seconds: int = 300  # Limit stock photo-mode flash writes
 
 @dataclass
 class DisplayConfig:
@@ -66,7 +67,9 @@ class AppConfig:
                         host=s.get("host", cfg.screen.host),
                         port=s.get("port", cfg.screen.port),
                         timeout=s.get("timeout", cfg.screen.timeout),
-                        brightness=s.get("brightness", cfg.screen.brightness)
+                        brightness=s.get("brightness", cfg.screen.brightness),
+                        min_upload_interval_seconds=max(30, int(s.get(
+                            "min_upload_interval_seconds", cfg.screen.min_upload_interval_seconds)))
                     )
                 if "display" in data:
                     d = data["display"]
@@ -126,7 +129,8 @@ class AppConfig:
                 "host": self.screen.host,
                 "port": self.screen.port,
                 "timeout": self.screen.timeout,
-                "brightness": self.screen.brightness
+                "brightness": self.screen.brightness,
+                "min_upload_interval_seconds": self.screen.min_upload_interval_seconds
             },
             "display": {
                 "mode": self.display.mode,

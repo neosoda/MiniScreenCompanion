@@ -236,3 +236,14 @@ print('ALL TESTS PASSED!')
 
 Distribué sous la **Licence MIT**. Consultez le fichier `LICENSE` pour plus de détails.  
 Copyright &copy; 2026 [neosoda](https://github.com/neosoda).
+
+
+## 🚧 Living Companion 2.0 — première fondation
+
+- Comportements pilotés par le temps réel (et non par le nombre de rafraîchissements).
+- Chat animé indépendant, ambiance jour/nuit et GIF animé en prévisualisation locale.
+- Les quotas indisponibles ne sont plus remplacés silencieusement par des pourcentages fictifs : utiliser `--demo` explicitement.
+- Sur le firmware constructeur GeekMagic : **JPEG statique uniquement, faute de preuve de prise en charge des GIF animés**. Limite d'envoi par défaut : 300 s, configurable via `screen.min_upload_interval_seconds`.
+- Les photos des autres emplacements ne sont plus écrasées.
+
+Détails : [Living Companion V2 — livrables et limites](docs/LIVING_COMPANION_V2.md).
