@@ -1,0 +1,32 @@
+{
+  "screen": {
+    "type": "geekmagic",
+    "host": "192.168.1.4",
+    "port": 80,
+    "timeout": 8,
+    "brightness": 85
+  },
+  "display": {
+    "mode": "summary",
+    "carousel_page_duration_seconds": 10
+  },
+  "polling": {
+    "refresh_interval_seconds": 60,
+    "retry_delay_seconds": 20
+  },
+  "providers": {
+    "claude": {
+      "enabled": true
+    },
+    "codex": {
+      "enabled": true
+    },
+    "antigravity": {
+      "enabled": true
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "dashboard.log"
+  }
+}
