@@ -99,19 +99,37 @@ python -m mini_screen_companion stop
     "brightness": 85
   },
   "display": {
-    "mode": "summary",
+    "mode": "cozy",
     "carousel_page_duration_seconds": 10
   },
+  "avatar": {
+    "name": "",
+    "status": "auto",
+    "action": "auto",
+    "animated": true,
+    "fps": 8,
+    "metric": "remaining"
+  },
   "polling": {
-    "refresh_interval_seconds": 60
+    "refresh_interval_seconds": 15
   }
 }
 ```
 
 ### Display Modes
-- `"summary"` *(Default)*: All 3 providers displayed simultaneously with dual gauges (`5H` & `7J`) and reset countdowns.
+- `"cozy"` *(Default)*: 1/3 top retro pixel art animated scene + 2/3 high-contrast quota HUD for Claude, Codex, and Gemini.
+- `"summary"`: All 3 providers displayed simultaneously with dual gauges (`5H` & `7J`) and reset countdowns.
 - `"carousel"`: Automatically cycles between the summary view and full-screen giant gauges for each provider every 10 seconds.
 - `"claude"` / `"codex"` / `"gemini"`: Dedicated full-screen view for your preferred provider.
+
+### Avatar Actions (`avatar.action`)
+- `"auto"`: Autonomous Tamagotchi mode — reacts to live dev sessions (Turbo Code, coffee break, cat petting, jog, night sleep).
+- `"desk"`: Developer coding at laptop with screen glow and steaming coffee mug.
+- `"coffee"`: Coffee break near window with animated steam.
+- `"pet"`: Cuddling orange cat with swaying tail and purrs.
+- `"run"`: Dynamic jogging across the room.
+- `"sleep"`: Cozy curled up sleeping on rug with floating 'z Z z'.
+- **Custom Avatar**: Drop any animated GIF or PNG frame sequence in `assets/avatar/custom.gif` to render your own custom pet or avatar!
 
 ---
 

@@ -41,12 +41,8 @@ class GeekMagicScreen(BaseScreen):
         if self._configured_photo_mode:
             return True
         try:
-            # 1. Enable single-slot photo mode
-            requests.get(f"{self.base_url}/file1-switch?getstate=1", timeout=self.timeout)
-            for slot in range(2, 6):
-                requests.get(f"{self.base_url}/file{slot}-switch?getstate=0", timeout=self.timeout)
-            # 2. Switch theme to photo display (Theme 2)
-            r = requests.get(f"{self.base_url}/themeselect?getstate=2", timeout=self.timeout)
+            h = {"Connection": "close"}
+            r = requests.get(f"{self.base_url}/themeselect?getstate=2", headers=h, timeout=self.timeout)
             self._configured_photo_mode = (r.status_code == 200)
             logger.info("Screen configured into single-slot Photo mode.")
             return True
@@ -63,9 +59,22 @@ class GeekMagicScreen(BaseScreen):
 
         self.ensure_single_photo_mode()
 
-        files = {"imageFile": ("file1.jpg", image_bytes, "image/jpeg")}
+        jpeg_payload = image_bytes
+        if image_bytes.startswith((b"GIF87a", b"GIF89a")):
+            import io
+            from PIL import Image
+            try:
+                with Image.open(io.BytesIO(image_bytes)) as gif:
+                    gif.seek(0)
+                    buf = io.BytesIO()
+                    gif.convert("RGB").save(buf, format="JPEG", quality=80)
+                    jpeg_payload = buf.getvalue()
+            except Exception as ex:
+                logger.warning(f"Could not convert GIF to JPEG for GeekMagic: {ex}")
+
+        files = {"imageFile": ("file1.jpg", jpeg_payload, "image/jpeg")}
         try:
-            r = requests.post(f"{self.base_url}/upload", files=files, timeout=self.timeout)
+            r = requests.post(f"{self.base_url}/upload", files=files, headers={"Connection": "close"}, timeout=self.timeout)
             if r.status_code == 200 or "successful" in r.text.lower():
                 self._last_frame_hash = current_hash
                 logger.debug("Frame uploaded successfully.")

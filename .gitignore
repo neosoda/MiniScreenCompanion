@@ -42,8 +42,10 @@ dashboard.log
 *.log
 
 # Output artifacts
-preview_output.jpg
-preview_output.png
+/preview.jpg
+/preview.gif
+/preview_output.jpg
+/preview_output.png
 
 # IDE & OS
 .vscode/

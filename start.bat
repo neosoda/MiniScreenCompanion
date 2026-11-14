@@ -39,6 +39,7 @@ if not exist "config.json" (
 :: 6. Launch CLI
 echo.
 echo [*] Starting Mini Screen Companion...
+set PYTHONPATH=src
 python -m mini_screen_companion once
 if %ERRORLEVEL% equ 0 (
     echo.

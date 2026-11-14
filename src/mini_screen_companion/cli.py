@@ -5,14 +5,16 @@ import signal
 import logging
 import argparse
 import subprocess
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
 from .core.config import AppConfig
 from .core.lock import ProcessLock, is_pid_alive
 from .collectors import get_dashboard_snapshot
-from .renderers import render_summary, render_detail
+from .renderers import render_summary, render_detail, render_cozy_avatar
 from .screens import get_screen_client, GeekMagicScreen, LocalFileScreen
+from .core.tamagotchi import TamagotchiBrain
 
 def setup_logging(level_name: str = "INFO", log_file: str = "dashboard.log"):
     level = getattr(logging, level_name.upper(), logging.INFO)
@@ -36,6 +38,7 @@ class CompanionApp:
         self.use_mock = use_mock
         self.screen = get_screen_client(config.screen)
         self.lock = ProcessLock()
+        self.tamagotchi = TamagotchiBrain()
 
     def run_once(self) -> bool:
         logging.info(f"Target display: {self.screen.__class__.__name__} ({self.config.screen.host})")
@@ -46,7 +49,23 @@ class CompanionApp:
             w7 = f"{p.weekly_7d.remaining_pct:.0f}% ({p.weekly_7d.format_countdown()})" if p.weekly_7d else "N/A"
             logging.info(f"  {p.display_name}: 5H={s5} | 7J={w7}")
 
-        frame = render_summary(snapshot)
+        mode = self.config.display.mode.lower()
+        if mode in ("cozy", "retro", "avatar"):
+            act_cfg = self.config.avatar
+            if act_cfg.action == "auto" or act_cfg.status == "auto":
+                act, mood = self.tamagotchi.update(snapshot)
+                act_cfg = replace(
+                    act_cfg,
+                    action=act if act_cfg.action == "auto" else act_cfg.action,
+                    status=mood if act_cfg.status == "auto" else act_cfg.status
+                )
+            frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg)
+        elif mode in ("claude", "codex", "gemini"):
+            p = next((x for x in snapshot.providers if x.provider_id == mode), snapshot.providers[0])
+            frame = render_detail(p)
+        else:
+            frame = render_summary(snapshot)
+
         ok = self.screen.upload_frame(frame)
         if ok:
             logging.info("Frame delivered successfully.")
@@ -64,6 +83,7 @@ class CompanionApp:
 
         interval = max(10, self.config.polling.refresh_interval_seconds)
         carousel_page = 0
+        loop_counter = 0
         last_poll_time = 0.0
         snapshot = None
 
@@ -89,7 +109,19 @@ class CompanionApp:
                 time_str = datetime.now().strftime("%H:%M")
                 mode = self.config.display.mode.lower()
 
-                if mode == "carousel" and snapshot.providers:
+                if mode in ("cozy", "retro", "avatar"):
+                    act_cfg = self.config.avatar
+                    if act_cfg.action == "auto" or act_cfg.status == "auto":
+                        act, mood = self.tamagotchi.update(snapshot)
+                        act_cfg = replace(
+                            act_cfg,
+                            action=act if act_cfg.action == "auto" else act_cfg.action,
+                            status=mood if act_cfg.status == "auto" else act_cfg.status
+                        )
+                    frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg, time_str=time_str, frame_offset=loop_counter)
+                    loop_counter += 1
+                    sleep_time = min(interval, 20)
+                elif mode == "carousel" and snapshot.providers:
                     # Alternates Summary with large provider views
                     pages = ["summary"] + [p.provider_id for p in snapshot.providers]
                     curr = pages[carousel_page % len(pages)]
@@ -133,20 +165,45 @@ def cmd_discover(args):
 def cmd_preview(args):
     """Generate preview image and display it."""
     cfg = AppConfig.load(args.config)
-    preview_file = args.output or "preview.jpg"
+    preview_file = args.output or ("preview.gif" if cfg.display.mode.lower() in ("cozy", "retro", "avatar") else "preview.jpg")
     screen = LocalFileScreen(output_path=preview_file)
     snapshot = get_dashboard_snapshot(cfg, use_mock=args.demo)
-    frame = render_summary(snapshot)
+
+    mode = cfg.display.mode.lower()
+    if mode in ("cozy", "retro", "avatar"):
+        brain = TamagotchiBrain()
+        act_cfg = cfg.avatar
+        if act_cfg.action == "auto" or act_cfg.status == "auto":
+            act, mood = brain.update(snapshot)
+            act_cfg = replace(
+                act_cfg,
+                action=act if act_cfg.action == "auto" else act_cfg.action,
+                status=mood if act_cfg.status == "auto" else act_cfg.status
+            )
+        frame = render_cozy_avatar(snapshot, avatar_cfg=act_cfg)
+    elif mode in ("claude", "codex", "gemini"):
+        p = next((x for x in snapshot.providers if x.provider_id == mode), snapshot.providers[0])
+        frame = render_detail(p)
+    else:
+        frame = render_summary(snapshot)
+
     screen.upload_frame(frame, force=True)
-    print(f"Preview generated: {Path(preview_file).resolve()}")
+    p_path = Path(preview_file).resolve()
+    print(f"Preview generated: {p_path}")
+    if p_path.suffix.lower() == ".gif":
+        jpg_companion = p_path.with_suffix(".jpg")
+        if jpg_companion.is_file():
+            print(f"Static JPEG frame: {jpg_companion}")
+
     if args.open:
         try:
+            target_open = str(p_path)
             if sys.platform.startswith("win"):
-                os.startfile(preview_file)
+                os.startfile(target_open)
             elif sys.platform == "darwin":
-                subprocess.run(["open", preview_file])
+                subprocess.run(["open", target_open])
             else:
-                subprocess.run(["xdg-open", preview_file])
+                subprocess.run(["xdg-open", target_open])
         except Exception:
             pass
 

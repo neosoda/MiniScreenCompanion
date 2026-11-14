@@ -3,16 +3,24 @@
     "type": "geekmagic",
     "host": "192.168.1.4",
     "port": 80,
-    "timeout": 8,
+    "timeout": 10,
     "brightness": 85
   },
   "display": {
-    "mode": "summary",
+    "mode": "cozy",
     "carousel_page_duration_seconds": 10
   },
+  "avatar": {
+    "name": "",
+    "status": "auto",
+    "action": "auto",
+    "animated": true,
+    "fps": 8,
+    "metric": "remaining"
+  },
   "polling": {
-    "refresh_interval_seconds": 60,
-    "retry_delay_seconds": 20
+    "refresh_interval_seconds": 15,
+    "retry_delay_seconds": 10
   },
   "providers": {
     "claude": {

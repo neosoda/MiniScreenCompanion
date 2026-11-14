@@ -18,6 +18,15 @@ class DisplayConfig:
     carousel_page_duration_seconds: int = 10
 
 @dataclass
+class AvatarConfig:
+    name: str = ""
+    status: str = "Ça vib"
+    action: str = "run"    # "run", "desk", "coffee", "pet", "sleep", "auto"
+    animated: bool = True
+    fps: int = 8
+    metric: str = "remaining"   # "remaining" or "used"
+
+@dataclass
 class PollingConfig:
     refresh_interval_seconds: int = 60
     retry_delay_seconds: int = 20
@@ -31,6 +40,7 @@ class LoggingConfig:
 class AppConfig:
     screen: ScreenConfig = field(default_factory=ScreenConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
+    avatar: AvatarConfig = field(default_factory=AvatarConfig)
     polling: PollingConfig = field(default_factory=PollingConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     providers: Dict[str, Any] = field(default_factory=lambda: {
@@ -63,6 +73,16 @@ class AppConfig:
                     cfg.display = DisplayConfig(
                         mode=d.get("mode", cfg.display.mode),
                         carousel_page_duration_seconds=d.get("carousel_page_duration_seconds", cfg.display.carousel_page_duration_seconds)
+                    )
+                if "avatar" in data:
+                    a = data["avatar"]
+                    cfg.avatar = AvatarConfig(
+                        name=a.get("name", cfg.avatar.name),
+                        status=a.get("status", cfg.avatar.status),
+                        action=a.get("action", cfg.avatar.action),
+                        animated=a.get("animated", cfg.avatar.animated),
+                        fps=a.get("fps", cfg.avatar.fps),
+                        metric=a.get("metric", cfg.avatar.metric)
                     )
                 if "polling" in data:
                     p = data["polling"]
@@ -111,6 +131,14 @@ class AppConfig:
             "display": {
                 "mode": self.display.mode,
                 "carousel_page_duration_seconds": self.display.carousel_page_duration_seconds
+            },
+            "avatar": {
+                "name": self.avatar.name,
+                "status": self.avatar.status,
+                "action": self.avatar.action,
+                "animated": self.avatar.animated,
+                "fps": self.avatar.fps,
+                "metric": self.avatar.metric
             },
             "polling": {
                 "refresh_interval_seconds": self.polling.refresh_interval_seconds,

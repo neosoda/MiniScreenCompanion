@@ -34,5 +34,6 @@ fi
 # 6. Launch
 echo ""
 echo "[*] Starting Mini Screen Companion..."
+export PYTHONPATH=src
 python -m mini_screen_companion once
 python -m mini_screen_companion run

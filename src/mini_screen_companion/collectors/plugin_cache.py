@@ -62,7 +62,7 @@ class PluginCacheCollector:
             ))
 
         # 3. Google Gemini / Antigravity
-        gemini_raw = data.get("gemini", {})
+        gemini_raw = data.get("gemini") or data.get("antigravity_gemini") or data.get("antigravity") or {}
         if gemini_raw:
             s_5h = self._parse_window(gemini_raw.get("session"))
             w_7d = self._parse_window(gemini_raw.get("weekly"))

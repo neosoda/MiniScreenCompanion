@@ -98,19 +98,37 @@ python -m mini_screen_companion stop
     "brightness": 85
   },
   "display": {
-    "mode": "summary",
+    "mode": "cozy",
     "carousel_page_duration_seconds": 10
   },
+  "avatar": {
+    "name": "",
+    "status": "auto",
+    "action": "auto",
+    "animated": true,
+    "fps": 8,
+    "metric": "remaining"
+  },
   "polling": {
-    "refresh_interval_seconds": 60
+    "refresh_interval_seconds": 15
   }
 }
 ```
 
 ### Modes d'affichage
-- `"summary"` *(Par défaut)* : Les 3 fournisseurs affichés simultanément avec double jauge (`5H` & `7J`) et décomptes de réinitialisation.
+- `"cozy"` *(Par défaut)* : Ratio 1/3 scène illustrée rétro pixel art animée + 2/3 HUD haute lisibilité des quotas (Claude, Codex, Gemini simultanés).
+- `"summary"` : Les 3 fournisseurs affichés simultanément avec double jauge (`5H` & `7J`) et décomptes de réinitialisation.
 - `"carousel"` : Alterne automatiquement toutes les 10 secondes entre la vue d'ensemble et des jauges géantes pour chaque fournisseur.
 - `"claude"` / `"codex"` / `"gemini"` : Vue plein écran dédiée au fournisseur choisi.
+
+### Animations d'avatar (`avatar.action`)
+- `"auto"` : Mode Tamagotchi vivant — réagit aux sessions de dev en direct (Code Turbo, pause café, câlin chat, jogging, dodo nuit).
+- `"desk"` : Développeur au bureau avec ordi portable lumineux et café fumant.
+- `"coffee"` : Pause café près de la fenêtre avec vapeur animée.
+- `"pet"` : Câlin avec le chat roux qui ronronne et remue la queue.
+- `"run"` : Course dynamique à travers la pièce.
+- `"sleep"` : Avatar endormi sur son tapis avec « z Z z ».
+- **Avatar personnalisé** : Glissez votre propre GIF animé ou séquence PNG dans `assets/avatar/custom.gif` pour l'animer automatiquement dans la scène !
 
 ---
 

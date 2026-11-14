@@ -28,9 +28,29 @@ class LocalFileScreen(BaseScreen):
 
         try:
             self.output_path.parent.mkdir(parents=True, exist_ok=True)
-            self.output_path.write_bytes(image_bytes)
+            is_gif = image_bytes.startswith((b"GIF87a", b"GIF89a"))
+
+            if is_gif:
+                gif_path = self.output_path.with_suffix(".gif")
+                jpg_path = self.output_path.with_suffix(".jpg")
+                gif_path.write_bytes(image_bytes)
+
+                # Also save first frame as JPEG for previewers expecting JPG
+                try:
+                    import io
+                    from PIL import Image
+                    with Image.open(io.BytesIO(image_bytes)) as im:
+                        im.seek(0)
+                        im.convert("RGB").save(jpg_path, format="JPEG", quality=92)
+                except Exception as ex:
+                    logger.debug(f"Could not write fallback JPEG: {ex}")
+
+                logger.info(f"Dashboard frames saved to {gif_path} and {jpg_path}")
+            else:
+                self.output_path.write_bytes(image_bytes)
+                logger.info(f"Dashboard frame saved to {self.output_path}")
+
             self._last_frame_hash = current_hash
-            logger.info(f"Dashboard frame saved to {self.output_path}")
             return True
         except Exception as e:
             logger.error(f"Failed to write local frame to {self.output_path}: {e}")
