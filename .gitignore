@@ -35,22 +35,25 @@ ENV/
 env.bak/
 venv.bak/
 
-# Local configuration & state (User secrets, IP, locks)
+# Local configuration & runtime state
 config.json
+.companion.pid
 .companion.lock
+companion.log
 dashboard.log
 *.log
+*.tmp
+cpu_temperature.json
 
-# Output artifacts
-/preview.jpg
-/preview.gif
-/preview_output.jpg
-/preview_output.png
-*.bin
+# Scratch & test images
+scratch_*.png
+test_*.png
+test_pyw.txt
 
 # IDE & OS
 .vscode/
 .idea/
+.serena/
 *.swp
 *.swo
 .DS_Store

@@ -1,40 +1,32 @@
 {
   "screen": {
-    "type": "geekmagic",
-    "host": "192.168.1.4",
-    "port": 80,
-    "timeout": 10,
-    "brightness": 85
+    "port": "AUTO",
+    "baudrate": 115200,
+    "width": 480,
+    "height": 320,
+    "orientation": "landscape",
+    "rotation": 0,
+    "brightness": 80,
+    "fps": 1
   },
-  "display": {
-    "mode": "summary",
-    "carousel_page_duration_seconds": 10
+  "telemetry": {
+    "interval_sec": 1.0,
+    "history_length": 30,
+    "mode": "sync"
   },
-  "avatar": {
-    "name": "",
-    "status": "",
-    "action": "auto",
-    "animated": true,
-    "fps": 8,
-    "metric": "remaining"
-  },
-  "polling": {
-    "refresh_interval_seconds": 15,
-    "retry_delay_seconds": 10
-  },
-  "providers": {
-    "claude": {
-      "enabled": true
-    },
-    "codex": {
-      "enabled": true
-    },
-    "antigravity": {
-      "enabled": true
-    }
-  },
-  "logging": {
-    "level": "INFO",
-    "file": "dashboard.log"
+  "theme": {
+    "background": [11, 15, 25],
+    "card_bg": [17, 24, 39],
+    "card_border": [31, 41, 55],
+    "card_inner": [24, 33, 50],
+    "cpu_accent": [0, 229, 255],
+    "ram_accent": [129, 140, 248],
+    "gpu_accent": [16, 185, 129],
+    "net_accent": [245, 158, 11],
+    "text_main": [243, 244, 246],
+    "text_muted": [156, 163, 175],
+    "good": [52, 211, 153],
+    "warn": [251, 191, 36],
+    "crit": [248, 113, 113]
   }
 }

@@ -3,31 +3,33 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mini-screen-companion"
-version = "1.0.0"
-description = "Real-time AI quota dashboard (Claude Code, OpenAI Codex, Google Antigravity) for mini desktop screens."
+name = "turing-35-companion"
+version = "2.0.0"
+description = "Real-time PC telemetry & AI quota cockpit dashboard for Turing 3.5\" IPS Smart Screen (USB-C Rev A)."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
     { name = "TechSentinel", email = "ops@techsentinel.fr" }
 ]
-keywords = ["geekmagic", "ai-quotas", "claude-code", "openai-codex", "esp8266", "desktop-screen", "monitor"]
+keywords = ["turing-smart-screen", "turing-35", "cockpit", "telemetry", "ai-quotas", "nvml", "hardware-monitor"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: System :: Monitoring",
 ]
 dependencies = [
-    "pillow>=9.5.0",
-    "requests>=2.28.0",
+    "pyserial>=3.5",
+    "pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "psutil>=5.9.0",
+    "pywin32>=306",
 ]
 
 [project.optional-dependencies]
@@ -37,13 +39,8 @@ dev = [
 ]
 
 [project.scripts]
-mini-screen = "mini_screen_companion.cli:main"
-ai-screen = "mini_screen_companion.cli:main"
-
-[project.urls]
-Homepage = "https://github.com/TechSentinel-fr/mini-screen-companion"
-Repository = "https://github.com/TechSentinel-fr/mini-screen-companion"
-Issues = "https://github.com/TechSentinel-fr/mini-screen-companion/issues"
+turing-companion = "run:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["src*"]

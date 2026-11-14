@@ -1,0 +1,5 @@
+Core (Tctl/Tdie) = 78,62501
+CCD1 (Tdie) = 72,375
+CCD2 (Tdie) = 49,5
+CCDs Max (Tdie) = 72,375
+CCDs Average (Tdie) = 60,9375
