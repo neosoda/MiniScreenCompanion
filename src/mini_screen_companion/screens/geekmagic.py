@@ -20,6 +20,7 @@ class GeekMagicScreen(BaseScreen):
         self.base_url = f"http://{self.host}:{self.port}"
         self._last_frame_hash: Optional[str] = None
         self._configured_photo_mode: bool = False
+        self._slots_sanitized: bool = False
 
     def is_reachable(self) -> bool:
         try:
@@ -46,10 +47,12 @@ class GeekMagicScreen(BaseScreen):
             requests.get(f"{self.base_url}/file1-switch?getstate=1", headers=h, timeout=self.timeout)
             for slot in range(2, 6):
                 requests.get(f"{self.base_url}/file{slot}-switch?getstate=0", headers=h, timeout=self.timeout)
+            # Maximize slideshow delay to avoid spurious cycling
+            requests.get(f"{self.base_url}/delaytime?getstate=60", headers=h, timeout=self.timeout)
             # 2. Select Photo display theme (Theme 2)
             r = requests.get(f"{self.base_url}/themeselect?getstate=2", headers=h, timeout=self.timeout)
             self._configured_photo_mode = (r.status_code == 200)
-            logger.info("Screen configured into single-slot Photo mode.")
+            logger.info("Screen configured into single-slot Photo mode (slideshow disabled).")
             return True
         except Exception as e:
             logger.warning(f"Could not enforce single photo mode: {e}")
@@ -80,20 +83,29 @@ class GeekMagicScreen(BaseScreen):
         files = {"imageFile": ("file1.jpg", jpeg_payload, "image/jpeg")}
         try:
             r = requests.post(f"{self.base_url}/upload", files=files, headers={"Connection": "close"}, timeout=self.timeout)
-            if r.status_code == 200 or "successful" in r.text.lower():
-                self._last_frame_hash = current_hash
-                logger.debug("Frame uploaded successfully.")
-                return True
-            else:
-                logger.error(f"Screen upload returned status {r.status_code}")
-                return False
+            success = r.status_code == 200 or "successful" in r.text.lower()
         except requests.exceptions.RequestException as e:
             err_str = str(e).lower()
-            if "data after connection: close" in err_str or "upload successful" in err_str:
-                self._last_frame_hash = current_hash
-                logger.debug(f"Handled benign firmware framing exception: {e}")
-                return True
-            logger.error(f"Connection error uploading frame to {self.base_url}: {e}")
+            success = "data after connection: close" in err_str or "upload successful" in err_str
+            if not success:
+                logger.error(f"Connection error uploading frame to {self.base_url}: {e}")
+                return False
+
+        if success:
+            self._last_frame_hash = current_hash
+            logger.debug("Frame uploaded successfully.")
+            # Sanitize secondary slideshow slots (2-5) once so factory photos are permanently eradicated
+            if not self._slots_sanitized:
+                self._slots_sanitized = True
+                for slot_idx in range(2, 6):
+                    try:
+                        s_files = {"imageFile": (f"file{slot_idx}.jpg", jpeg_payload, "image/jpeg")}
+                        requests.post(f"{self.base_url}/upload", files=s_files, headers={"Connection": "close"}, timeout=self.timeout)
+                    except Exception:
+                        pass
+            return True
+        else:
+            logger.error("Screen upload failed.")
             return False
 
     @classmethod
