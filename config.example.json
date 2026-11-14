@@ -7,7 +7,7 @@
     "brightness": 85
   },
   "display": {
-    "mode": "cozy",
+    "mode": "summary",
     "carousel_page_duration_seconds": 10
   },
   "avatar": {

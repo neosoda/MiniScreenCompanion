@@ -48,10 +48,6 @@ dashboard.log
 /preview_output.png
 *.bin
 
-# Embedded firmware builds
-.pio/
-firmware/.pio/
-
 # IDE & OS
 .vscode/
 .idea/
