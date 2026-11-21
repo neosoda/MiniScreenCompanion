@@ -4,7 +4,7 @@
 
 Cockpit de télémétrie PC et de quotas IA en temps réel pour écran **Turing Smart Screen 3.5" IPS** (USB Type-C, révision Rev A / CH552T `USB35INCHIPSV2`).
 
-<p align="center"><a href="#-utilisation-rapide"><strong>Démarrer</strong></a> · <a href="#️-configuration-configjson">Configurer</a> · <a href="#-tests">Tests</a></p>
+<p align="center"><a href="#-utilisation-rapide"><strong>Démarrer</strong></a> · <a href="config.example.json">Configurer</a> · <a href="#-tests">Tests</a></p>
 
 <table><tr><td width="50%"><img src="preview.png" alt="Capture réelle du cockpit de monitoring PC sur écran Turing 3,5 pouces"></td><td width="50%"><img src="quota_preview.png" alt="Capture réelle des indicateurs de quotas d'assistants IA"></td></tr><tr><td align="center"><sub>Monitoring CPU, GPU, mémoire et réseau</sub></td><td align="center"><sub>Suivi des quotas Claude Code, Codex et Gemini</sub></td></tr></table>
 
